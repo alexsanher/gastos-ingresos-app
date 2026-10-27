@@ -70,6 +70,9 @@ function cargarRegistros() {
         }
     }
     cargarCategorias();
+    // --- CORRECCIÓN: asegurar que el modal de categorías esté oculto al iniciar ---
+    modalCategorias.classList.add('hidden');
+    modalCategorias.hidden = true;
     const mesMasReciente = obtenerMesMasRecienteConDatos();
     if (mesMasReciente) {
         mesActual = mesMasReciente;
