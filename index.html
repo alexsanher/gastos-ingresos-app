@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gastos e Ingresos</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Gastos">
+    <link rel="apple-touch-icon" href="icon-192.svg">
+    <link rel="icon" type="image/svg+xml" href="icon-192.svg">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gastos e Ingresos</h1>
+            <nav class="tabs" role="tablist">
+                <button id="tab-registrar" class="tab active" role="tab" aria-selected="true" aria-controls="panel-registrar">Registrar</button>
+                <button id="tab-estadisticas" class="tab" role="tab" aria-selected="false" aria-controls="panel-estadisticas">Estadísticas</button>
+            </nav>
+            <div class="header-acciones">
+                <button id="btn-exportar" class="btn-accion" title="Exportar datos" aria-label="Exportar datos">📤</button>
+                <button id="btn-importar" class="btn-accion" title="Importar datos" aria-label="Importar datos">📥</button>
+                <input type="file" id="input-importar" accept=".json" hidden>
+            </div>
+        </header>
+
+        <!-- PANEL REGISTRAR -->
+        <section id="panel-registrar" class="tab-panel active" role="tabpanel">
+            <div id="mes-navegacion" class="mes-navegacion">
+                <button id="btn-mes-anterior" class="btn-nav" aria-label="Mes anterior">‹</button>
+                <span id="mes-actual" class="mes-actual"></span>
+                <button id="btn-mes-siguiente" class="btn-nav" aria-label="Mes siguiente">›</button>
+            </div>
+
+            <form id="formulario" class="formulario">
+                <div class="campo">
+                    <label for="tipo">Tipo</label>
+                    <select id="tipo" name="tipo" required>
+                        <option value="ingreso">Ingreso</option>
+                        <option value="gasto" selected>Gasto</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="nombre">Nombre</label>
+                    <input type="text" id="nombre" name="nombre" placeholder="Ej: Compra supermercado" required>
+                </div>
+
+                <div class="campo">
+                    <label for="dinero">Dinero (€)</label>
+                    <input type="number" id="dinero" name="dinero" step="0.01" min="0.01" placeholder="Ej: 25.50" required>
+                </div>
+
+                <div class="campo categoria-grupo">
+                    <label for="categoria">Categoría</label>
+                    <div class="select-con-boton">
+                        <select id="categoria" name="categoria" required>
+                            <option value="">Selecciona una categoría</option>
+                        </select>
+                        <button type="button" id="btn-nueva-categoria" class="btn-icono" aria-label="Nueva categoría">+</button>
+                    </div>
+                </div>
+
+                <div class="campo">
+                    <label for="fecha">Fecha</label>
+                    <input type="date" id="fecha" name="fecha" required>
+                </div>
+
+                <button type="submit" class="btn-guardar">Guardar</button>
+            </form>
+
+            <section class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card ingreso">
+                        <span class="stat-label">Ingresos</span>
+                        <span id="stat-ingresos" class="stat-valor">0.00 €</span>
+                    </div>
+                    <div class="stat-card gasto">
+                        <span class="stat-label">Gastos</span>
+                        <span id="stat-gastos" class="stat-valor">0.00 €</span>
+                    </div>
+                    <div class="stat-card balance">
+                        <span class="stat-label">Balance</span>
+                        <span id="stat-balance" class="stat-valor">0.00 €</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lista-section">
+                <h2 id="lista-titulo">Registros</h2>
+                <ul id="lista" class="lista"></ul>
+                <p id="vacío" class="vacío hidden">No hay registros en este mes</p>
+            </section>
+        </section>
+
+        <!-- PANEL ESTADÍSTICAS -->
+        <section id="panel-estadisticas" class="tab-panel" role="tabpanel" hidden>
+            <div class="filtros-estadisticas">
+                <div class="filtro-grupo">
+                    <label for="filtro-tipo">Tipo</label>
+                    <select id="filtro-tipo">
+                        <option value="todos">Todos</option>
+                        <option value="ingreso">Ingresos</option>
+                        <option value="gasto">Gastos</option>
+                    </select>
+                </div>
+                <div class="filtro-grupo">
+                    <label for="filtro-categoria">Categoría</label>
+                    <select id="filtro-categoria">
+                        <option value="todas">Todas</option>
+                    </select>
+                </div>
+                <div class="filtro-grupo">
+                    <label for="filtro-desde">Desde</label>
+                    <input type="month" id="filtro-desde">
+                </div>
+                <div class="filtro-grupo">
+                    <label for="filtro-hasta">Hasta</label>
+                    <input type="month" id="filtro-hasta">
+                </div>
+                <button id="btn-limpiar-filtros" class="btn-limpiar">Limpiar filtros</button>
+            </div>
+
+            <div class="stats-resumen">
+                <div class="stat-card grande ingreso">
+                    <span class="stat-label">Total Ingresos</span>
+                    <span id="stat-total-ingresos" class="stat-valor">0.00 €</span>
+                </div>
+                <div class="stat-card grande gasto">
+                    <span class="stat-label">Total Gastos</span>
+                    <span id="stat-total-gastos" class="stat-valor">0.00 €</span>
+                </div>
+                <div class="stat-card grande balance">
+                    <span class="stat-label">Balance Total</span>
+                    <span id="stat-total-balance" class="stat-valor">0.00 €</span>
+                </div>
+            </div>
+
+            <section class="stats-detalle">
+                <h3>Por categoría</h3>
+                <div id="stats-categorias" class="stats-barras"></div>
+            </section>
+
+            <section class="stats-detalle">
+                <h3>Evolución mensual</h3>
+                <div id="stats-meses" class="stats-barras"></div>
+            </section>
+
+            <section class="stats-detalle">
+                <h3>Registros filtrados</h3>
+                <ul id="lista-filtrada" class="lista"></ul>
+                <p id="vacío-filtrado" class="vacío hidden">No hay registros con estos filtros</p>
+            </section>
+        </section>
+
+        <!-- MODAL CATEGORÍAS -->
+        <div id="modal-categorias" class="modal hidden" role="dialog" aria-labelledby="modal-categorias-titulo" aria-modal="true">
+            <div class="modal-contenido">
+                <header class="modal-header">
+                    <h2 id="modal-categorias-titulo">Gestionar categorías</h2>
+                    <button id="btn-cerrar-modal" class="btn-cerrar" aria-label="Cerrar">×</button>
+                </header>
+                <div class="modal-cuerpo">
+                    <form id="form-nueva-categoria" class="form-nueva-categoria">
+                        <input type="text" id="input-nueva-categoria" placeholder="Nombre de la categoría" required maxlength="20">
+                        <button type="submit" class="btn-pequeno">Añadir</button>
+                    </form>
+                    <ul id="lista-categorias-modal" class="lista-categorias-modal"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+      // Registrar Service Worker para PWA offline
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      }
+    </script>
+</body>
+</html>
