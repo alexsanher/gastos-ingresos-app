@@ -603,6 +603,13 @@ select#tipo option {
     animation: fadeIn 0.2s ease;
 }
 
+/* Regla específica para ocultar el modal: sin ella, el display: flex de
+   arriba (escrito después de .hidden) gana y el modal se vería siempre */
+.modal.hidden,
+.modal[hidden] {
+    display: none;
+}
+
 .modal-contenido {
     background: white;
     border-radius: 16px;
