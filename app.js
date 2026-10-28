@@ -1,5 +1,4 @@
 const STORAGE_KEY = 'gastos_ingresos';
-const CATEGORIAS_KEY = 'gastos_categorias';
 
 // Elementos comunes
 const tabRegistrar = document.getElementById('tab-registrar');
@@ -24,14 +23,16 @@ const statBalance = document.getElementById('stat-balance');
 const fechaInput = document.getElementById('fecha');
 const tipoSelect = document.getElementById('tipo');
 const categoriaSelect = document.getElementById('categoria');
-const btnNuevaCategoria = document.getElementById('btn-nueva-categoria');
+const btnGuardar = document.getElementById('btn-guardar');
+const btnCancelarEdicion = document.getElementById('btn-cancelar-edicion');
 
-// Panel Estadísticas
+// Filtros de la pestaña Estadísticas (los usa obtenerRegistrosFiltrados y cargarDatos)
 const filtroTipo = document.getElementById('filtro-tipo');
 const filtroCategoria = document.getElementById('filtro-categoria');
 const filtroDesde = document.getElementById('filtro-desde');
 const filtroHasta = document.getElementById('filtro-hasta');
-const btnLimpiarFiltros = document.getElementById('btn-limpiar-filtros');
+
+// Panel Estadísticas
 const statTotalIngresos = document.getElementById('stat-total-ingresos');
 const statTotalGastos = document.getElementById('stat-total-gastos');
 const statTotalBalance = document.getElementById('stat-total-balance');
@@ -40,27 +41,33 @@ const statsMeses = document.getElementById('stats-meses');
 const listaFiltrada = document.getElementById('lista-filtrada');
 const vacioFiltrado = document.getElementById('vacío-filtrado');
 
-// Modal categorías
-const modalCategorias = document.getElementById('modal-categorias');
-const btnCerrarModal = document.getElementById('btn-cerrar-modal');
-const formNuevaCategoria = document.getElementById('form-nueva-categoria');
-const inputNuevaCategoria = document.getElementById('input-nueva-categoria');
-const listaCategoriasModal = document.getElementById('lista-categorias-modal');
-
-let registros = [];
-let categorias = [];
-let mesActual = new Date();
-
-const CATEGORIAS_PREDETERMINADAS = [
-    { id: 'comida', nombre: 'Comida', emoji: '🍔', predeterminada: true },
-    { id: 'ocio', nombre: 'Ocio', emoji: '🎮', predeterminada: true },
-    { id: 'transporte', nombre: 'Transporte', emoji: '🚌', predeterminada: true },
-    { id: 'salud', nombre: 'Salud', emoji: '💊', predeterminada: true },
-    { id: 'viajes', nombre: 'Viajes', emoji: '✈️', predeterminada: true },
-    { id: 'otros', nombre: 'Otros', emoji: '📦', predeterminada: true }
+// --- Configuración: 5 categorías predeterminadas SOLO ---
+// Sin posibilidad de crear nuevas categorías
+const CATEGORIAS_PREDEFINIDAS = [
+    { id: 'comida', nombre: 'Comida', emoji: '🍔' },
+    { id: 'ocio', nombre: 'Ocio', emoji: '🎮' },
+    { id: 'transporte', nombre: 'Transporte', emoji: '🚌' },
+    { id: 'salud', nombre: 'Salud', emoji: '💊' },
+    { id: 'otros', nombre: 'Otros', emoji: '📦' }
 ];
 
-function cargarRegistros() {
+// Inicializar categorías: solo las 5 predeterminadas
+let categorias = [...CATEGORIAS_PREDEFINIDAS];
+
+let registros = [];
+let mesActual = new Date;
+
+// Registro que se está editando ahora mismo (null si se está guardando uno nuevo)
+let registroEditando = null;
+
+// Guardar todos los registros en localStorage
+function guardarRegistros() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
+}
+
+// --- FUNCION: Cargar categorías y datos ---
+function cargarDatos() {
+    // Cargar registros
     const datos = localStorage.getItem(STORAGE_KEY);
     if (datos) {
         try {
@@ -69,59 +76,74 @@ function cargarRegistros() {
             registros = [];
         }
     }
-    cargarCategorias();
-    // --- CORRECCIÓN: asegurar que el modal de categorías esté oculto al iniciar ---
-    modalCategorias.classList.add('hidden');
-    modalCategorias.hidden = true;
-    const mesMasReciente = obtenerMesMasRecienteConDatos();
-    if (mesMasReciente) {
-        mesActual = mesMasReciente;
+
+    // Llenar el selector de categorías con las 5 predeterminadas
+    categoriaSelect.innerHTML = '<option value="">Selecciona una categoría</option>';
+    filtroCategoria.innerHTML = '<option value="todas">Todas</option>';
+    for (const cat of CATEGORIAS_PREDEFINIDAS) {
+        const texto = cat.emoji + ' ' + cat.nombre;
+
+        const opt = document.createElement('option');
+        opt.value = cat.nombre;
+        opt.textContent = texto;
+        categoriaSelect.appendChild(opt);
+
+        const optFiltro = document.createElement('option');
+        optFiltro.value = cat.nombre;
+        optFiltro.textContent = cat.nombre;
+        filtroCategoria.appendChild(optFiltro);
     }
+
     fechaInput.value = formatearFechaInput(new Date());
     fechaInput.max = formatearFechaInput(new Date());
-    const hoy = new Date();
-    filtroHasta.max = formatearMesInput(hoy);
-    filtroDesde.max = formatearMesInput(hoy);
-    tipoSelect.className = tipoSelect.value;
+    renderizarRegistrar();
+    renderizarEstadisticas();
+}
+
+// --- EDITAR / ELIMINAR REGISTROS ---
+function empezarEdicion(registro) {
+    registroEditando = registro;
+
+    // Ir a la pestaña Registrar y rellenar el formulario con los datos actuales
+    cambiarTab('registrar');
+    tipoSelect.value = registro.tipo;
+    tipoSelect.className = registro.tipo;
+    document.getElementById('nombre').value = registro.nombre;
+    document.getElementById('dinero').value = registro.dinero;
+    categoriaSelect.value = registro.categoria;
+    fechaInput.value = formatearFechaInput(new Date(registro.fecha));
+
+    btnGuardar.textContent = 'Actualizar';
+    btnCancelarEdicion.classList.remove('hidden');
+    document.getElementById('nombre').focus();
+}
+
+function cancelarEdicion() {
+    registroEditando = null;
+    formulario.reset();
+    fechaInput.value = formatearFechaInput(new Date());
+    tipoSelect.className = '';
+    btnGuardar.textContent = 'Guardar';
+    btnCancelarEdicion.classList.add('hidden');
+}
+
+function eliminarRegistro(registro) {
+    if (!confirm(`¿Eliminar "${registro.nombre}" (${formatearDinero(registro.dinero)})?`)) {
+        return;
+    }
+    const indice = registros.indexOf(registro);
+    if (indice === -1) return;
+    registros.splice(indice, 1);
+    guardarRegistros();
+
+    // Si el registro eliminado era el que se estaba editando, limpiar el formulario
+    if (registroEditando === registro) {
+        cancelarEdicion();
+    }
     renderizarTodo();
 }
 
-function cargarCategorias() {
-    const datos = localStorage.getItem(CATEGORIAS_KEY);
-    if (datos) {
-        try {
-            categorias = JSON.parse(datos);
-            // Migrar formato antiguo si existe (array de strings)
-            if (categorias.length && typeof categorias[0] === 'string') {
-                categorias = categorias.map(n => ({ id: n.toLowerCase(), nombre: n, emoji: '', predeterminada: false }));
-            }
-        } catch {
-            categorias = [];
-        }
-    }
-    // Si no hay categorías guardadas, usar predeterminadas
-    if (categorias.length === 0) {
-        categorias = [...CATEGORIAS_PREDETERMINADAS];
-        guardarCategorias();
-    }
-    // Asegurar que las predeterminadas existan (por si se borraron)
-    for (const pred of CATEGORIAS_PREDETERMINADAS) {
-        if (!categorias.find(c => c.id === pred.id)) {
-            categorias.unshift(pred);
-        }
-    }
-    guardarCategorias();
-    actualizarSelectsCategoria();
-}
-
-function guardarCategorias() {
-    localStorage.setItem(CATEGORIAS_KEY, JSON.stringify(categorias));
-}
-
-function guardarRegistros() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
-}
-
+// --- FORMATOS ---
 function formatearDinero(cantidad) {
     return cantidad.toFixed(2) + ' €';
 }
@@ -165,131 +187,6 @@ function filtrarRegistrosMes(mes) {
     return registros.filter(r => r.fecha >= inicio && r.fecha <= fin);
 }
 
-// --- CATEGORÍAS ---
-function actualizarSelectsCategoria() {
-    // Select formulario
-    const valorActual = categoriaSelect.value;
-    categoriaSelect.innerHTML = '<option value="">Selecciona una categoría</option>';
-    for (const cat of categorias) {
-        const opt = document.createElement('option');
-        opt.value = cat.nombre;
-        opt.textContent = (cat.emoji ? cat.emoji + ' ' : '') + cat.nombre;
-        categoriaSelect.appendChild(opt);
-    }
-    if (valorActual && [...categoriaSelect.options].some(o => o.value === valorActual)) {
-        categoriaSelect.value = valorActual;
-    }
-
-    // Select filtro estadísticas
-    const valorFiltro = filtroCategoria.value;
-    filtroCategoria.innerHTML = '<option value="todas">Todas</option>';
-    for (const cat of categorias) {
-        const opt = document.createElement('option');
-        opt.value = cat.nombre;
-        opt.textContent = cat.nombre;
-        filtroCategoria.appendChild(opt);
-    }
-    if (valorFiltro && [...filtroCategoria.options].some(o => o.value === valorFiltro)) {
-        filtroCategoria.value = valorFiltro;
-    }
-}
-
-function abrirModalCategorias() {
-    renderizarListaCategoriasModal();
-    modalCategorias.classList.remove('hidden');
-    modalCategorias.hidden = false;
-    inputNuevaCategoria.focus();
-}
-
-function cerrarModalCategorias() {
-    modalCategorias.classList.add('hidden');
-    modalCategorias.hidden = true;
-    formNuevaCategoria.reset();
-}
-
-function renderizarListaCategoriasModal() {
-    listaCategoriasModal.innerHTML = '';
-    for (const cat of categorias) {
-        const li = document.createElement('li');
-        li.className = 'categoria-item';
-        li.dataset.id = cat.id;
-
-        const esPredeterminada = CATEGORIAS_PREDETERMINADAS.some(p => p.id === cat.id);
-        const enUso = registros.some(r => r.categoria === cat.nombre);
-
-        li.innerHTML = `
-            <div class="categoria-info">
-                <span class="categoria-badge ${esPredeterminada ? 'predeterminada' : 'personalizada'}">
-                    ${esPredeterminada ? 'Sistema' : 'Tuya'}
-                </span>
-                <span class="categoria-nombre">${cat.emoji ? cat.emoji + ' ' : ''}${escapeHtml(cat.nombre)}</span>
-            </div>
-            <button class="btn-eliminar-categoria" ${esPredeterminada || enUso ? 'disabled' : ''} aria-label="Eliminar ${escapeHtml(cat.nombre)}">🗑</button>
-        `;
-
-        const btnEliminar = li.querySelector('.btn-eliminar-categoria');
-        if (!esPredeterminada && !enUso) {
-            btnEliminar.addEventListener('click', () => eliminarCategoria(cat.id));
-        }
-
-        listaCategoriasModal.appendChild(li);
-    }
-}
-
-function eliminarCategoria(id) {
-    const cat = categorias.find(c => c.id === id);
-    if (!cat) return;
-    if (CATEGORIAS_PREDETERMINADAS.some(p => p.id === id)) return;
-    if (registros.some(r => r.categoria === cat.nombre)) return;
-
-    categorias = categorias.filter(c => c.id !== id);
-    guardarCategorias();
-    actualizarSelectsCategoria();
-    renderizarListaCategoriasModal();
-}
-
-function generarIdCategoria(nombre) {
-    let base = nombre.toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-    let id = base;
-    let contador = 1;
-    while (categorias.some(c => c.id === id)) {
-        id = base + '-' + contador;
-        contador++;
-    }
-    return id;
-}
-
-// --- FILTROS ESTADÍSTICAS ---
-function obtenerRegistrosFiltrados() {
-    let resultado = [...registros];
-
-    if (filtroTipo.value !== 'todos') {
-        resultado = resultado.filter(r => r.tipo === filtroTipo.value);
-    }
-
-    if (filtroCategoria.value !== 'todas') {
-        resultado = resultado.filter(r => r.categoria === filtroCategoria.value);
-    }
-
-    if (filtroDesde.value) {
-        const [year, month] = filtroDesde.value.split('-').map(Number);
-        const inicio = new Date(year, month - 1, 1).getTime();
-        resultado = resultado.filter(r => r.fecha >= inicio);
-    }
-
-    if (filtroHasta.value) {
-        const [year, month] = filtroHasta.value.split('-').map(Number);
-        const fin = new Date(year, month, 0, 23, 59, 59, 999).getTime();
-        resultado = resultado.filter(r => r.fecha <= fin);
-    }
-
-    return resultado;
-}
-
 function calcularStats(registrosLista) {
     let ingresos = 0;
     let gastos = 0;
@@ -302,7 +199,8 @@ function calcularStats(registrosLista) {
 
 // --- RENDER PANEL REGISTRAR ---
 function renderizarRegistrar() {
-    mesActualEl.textContent = formatearMes(mesActual).replace(/^\w/, c => c.toUpperCase());
+    const mesTexto = formatearMes(mesActual).replace(/^\w/, c => c.toUpperCase());
+    mesActualEl.textContent = mesTexto;
     listaTitulo.textContent = 'Registros de ' + formatearMes(mesActual).toLowerCase();
 
     const registrosMes = filtrarRegistrosMes(mesActual);
@@ -331,11 +229,11 @@ function actualizarStatsMes(registrosMes) {
 }
 
 function actualizarNavegacion() {
-    const mesMasReciente = obtenerMesMasRecienteConDatos();
-    const hoy = new Date();
+    const masRecienteSolo = obtenerMesMasRecienteConDatos()
+        ? new Date(obtenerMesMasRecienteConDatos().getFullYear(), obtenerMesMasRecienteConDatos().getMonth(), 1)
+        : null;
+    const hoySolo = new Date();
     const mesActualSolo = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1);
-    const hoySolo = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    const masRecienteSolo = mesMasReciente ? new Date(mesMasReciente.getFullYear(), mesMasReciente.getMonth(), 1) : null;
 
     btnMesSiguiente.disabled = mesActualSolo >= hoySolo;
     btnMesAnterior.disabled = !masRecienteSolo || mesActualSolo <= masRecienteSolo;
@@ -361,6 +259,32 @@ function renderizarEstadisticas() {
     renderizarListaFiltrada(filtrados);
 }
 
+function obtenerRegistrosFiltrados() {
+    let resultado = [...registros];
+
+    if (filtroTipo.value !== 'todos') {
+        resultado = resultado.filter(r => r.tipo === filtroTipo.value);
+    }
+
+    if (filtroCategoria.value !== 'todas') {
+        resultado = resultado.filter(r => r.categoria === filtroCategoria.value);
+    }
+
+    if (filtroDesde.value) {
+        const [year, month] = filtroDesde.value.split('-').map(Number);
+        const inicio = new Date(year, month - 1, 1).getTime();
+        resultado = resultado.filter(r => r.fecha >= inicio);
+    }
+
+    if (filtroHasta.value) {
+        const [year, month] = filtroHasta.value.split('-').map(Number);
+        const fin = new Date(year, month, 0, 23, 59, 59, 999).getTime();
+        resultado = resultado.filter(r => r.fecha <= fin);
+    }
+
+    return resultado;
+}
+
 function renderizarPorCategoria(registrosLista) {
     const porCat = {};
     for (const r of registrosLista) {
@@ -382,14 +306,24 @@ function renderizarPorCategoria(registrosLista) {
         return;
     }
 
+    // Ordenar por total (mayor a menor)
     const catsOrdenadas = Object.keys(porCat).sort((a, b) => totales[b] - totales[a]);
+
+    // Mapeo de colores para las 5 categorías
+    const colores = {
+        'comida': '#f59e0b',
+        'ocio': '#8b5cf6',
+        'transporte': '#06b6d4',
+        'salud': '#ec4899',
+        'otros': '#6b7280'
+    };
 
     for (const cat of catsOrdenadas) {
         const datos = porCat[cat];
         const total = totales[cat];
         const pct = (total / maxTotal) * 100;
-        const catObj = categorias.find(c => c.nombre === cat);
-        const color = catObj ? getCatColor(catObj) : '#6b7280';
+        const catObj = CATEGORIAS_PREDEFINIDAS.find(c => c.nombre === cat);
+        const color = catObj ? colores[catObj.id] : '#6b7280';
         const emoji = catObj ? catObj.emoji : '📦';
 
         const div = document.createElement('div');
@@ -398,7 +332,7 @@ function renderizarPorCategoria(registrosLista) {
             <div class="barra-header">
                 <div class="barra-nombre">
                     <span class="categoria-badge" style="background: ${color}22; color: ${color}">
-                        ${emoji} ${escapeHtml(cat)}
+                        ${emoji} ${cat}
                     </span>
                 </div>
                 <span class="barra-valor">${formatearDinero(total)}</span>
@@ -413,24 +347,6 @@ function renderizarPorCategoria(registrosLista) {
         `;
         statsCategorias.appendChild(div);
     }
-}
-
-function getCatColor(cat) {
-    // Colores fijos para predeterminadas, hash para personalizadas
-    const coloresFijos = {
-        'comida': '#f59e0b',
-        'ocio': '#8b5cf6',
-        'transporte': '#06b6d4',
-        'salud': '#ec4899',
-        'viajes': '#84cc16',
-        'otros': '#6b7280'
-    };
-    if (coloresFijos[cat.id]) return coloresFijos[cat.id];
-    // Hash simple para categorías personalizadas
-    let hash = 0;
-    for (let i = 0; i < cat.nombre.length; i++) hash = cat.nombre.charCodeAt(i) + ((hash << 5) - hash);
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 55%, 45%)`;
 }
 
 function renderizarPorMes(registrosLista) {
@@ -518,7 +434,7 @@ function crearElementoRegistro(registro, conFechaCompleta = false) {
     }
 
     // Buscar emoji de la categoría
-    const catObj = categorias.find(c => c.nombre === registro.categoria);
+    const catObj = CATEGORIAS_PREDEFINIDAS.find(c => c.nombre === registro.categoria);
     const emoji = catObj ? catObj.emoji : '📦';
 
     li.innerHTML = `
@@ -531,7 +447,14 @@ function crearElementoRegistro(registro, conFechaCompleta = false) {
             </div>
         </div>
         <span class="item-dinero ${dineroClass}">${signo}${formatearDinero(registro.dinero)}</span>
+        <div class="item-acciones">
+            <button type="button" class="btn-item editar" aria-label="Editar ${escapeHtml(registro.nombre)}">✏️</button>
+            <button type="button" class="btn-item eliminar" aria-label="Eliminar ${escapeHtml(registro.nombre)}">🗑️</button>
+        </div>
     `;
+
+    li.querySelector('.btn-item.editar').addEventListener('click', () => empezarEdicion(registro));
+    li.querySelector('.btn-item.eliminar').addEventListener('click', () => eliminarRegistro(registro));
 
     return li;
 }
@@ -583,16 +506,19 @@ function importarDatos(archivo) {
             registros = validos;
             guardarRegistros();
 
-            // Importar categorías si vienen en el archivo
+            // Importar categorías si vienen en el archivo (solo las predeterminadas)
             if (datos.categorias && Array.isArray(datos.categorias)) {
-                // Fusionar: mantener las del usuario + añadir nuevas del archivo
                 for (const catArchivo of datos.categorias) {
-                    if (!categorias.some(c => c.id === catArchivo.id)) {
-                        categorias.push(catArchivo);
+                    if (!CATEGORIAS_PREDEFINIDAS.find(c => c.id === catArchivo.id || c.nombre === catArchivo.nombre)) {
+                        const catExistente = categorias.find(c => c.nombre === catArchivo.nombre);
+                        if (!catExistente) {
+                            const catPredeterminada = CATEGORIAS_PREDEFINIDAS.find(c => c.id === catArchivo.id || c.nombre === 'Otros');
+                            if (catPredeterminada) {
+                                categorias.push(catPredeterminada);
+                            }
+                        }
                     }
                 }
-                guardarCategorias();
-                actualizarSelectsCategoria();
             }
 
             const mesMasReciente = obtenerMesMasRecienteConDatos();
@@ -655,21 +581,34 @@ formulario.addEventListener('submit', function(e) {
     const [year, month, day] = fechaStr.split('-').map(Number);
     const fechaTimestamp = new Date(year, month - 1, day, 12, 0, 0).getTime();
 
-    const registro = {
-        tipo: tipo,
-        nombre: nombre,
-        dinero: dinero,
-        categoria: categoria,
-        fecha: fechaTimestamp
-    };
+    if (registroEditando) {
+        // Modo edición: modificar el registro existente
+        registroEditando.tipo = tipo;
+        registroEditando.nombre = nombre;
+        registroEditando.dinero = dinero;
+        registroEditando.categoria = categoria;
+        registroEditando.fecha = fechaTimestamp;
 
-    registros.push(registro);
+        cancelarEdicion();
+    } else {
+        // Modo normal: crear un registro nuevo
+        const registro = {
+            tipo: tipo,
+            nombre: nombre,
+            dinero: dinero,
+            categoria: categoria,
+            fecha: fechaTimestamp
+        };
+
+        registros.push(registro);
+
+        formulario.reset();
+        fechaInput.value = formatearFechaInput(new Date());
+        tipoSelect.className = '';
+    }
+
     guardarRegistros();
     renderizarTodo();
-
-    formulario.reset();
-    fechaInput.value = formatearFechaInput(new Date());
-    tipoSelect.className = '';
 });
 
 btnMesAnterior.addEventListener('click', () => cambiarMes(-1));
@@ -691,55 +630,8 @@ tipoSelect.addEventListener('change', function() {
     this.className = this.value;
 });
 
-// Modal categorías
-btnNuevaCategoria.addEventListener('click', abrirModalCategorias);
-btnCerrarModal.addEventListener('click', cerrarModalCategorias);
-modalCategorias.addEventListener('click', (e) => {
-    if (e.target === modalCategorias) cerrarModalCategorias();
-});
+// Botón Cancelar: salir del modo edición
+btnCancelarEdicion.addEventListener('click', cancelarEdicion);
 
-formNuevaCategoria.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const nombre = inputNuevaCategoria.value.trim();
-    if (!nombre) return;
-    if (categorias.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) {
-        alert('Esa categoría ya existe');
-        return;
-    }
-    const nuevaCat = {
-        id: generarIdCategoria(nombre),
-        nombre: nombre,
-        emoji: '📝',
-        predeterminada: false
-    };
-    categorias.push(nuevaCat);
-    guardarCategorias();
-    actualizarSelectsCategoria();
-    renderizarListaCategoriasModal();
-    inputNuevaCategoria.value = '';
-    inputNuevaCategoria.focus();
-    // Seleccionar la nueva categoría en el formulario
-    categoriaSelect.value = nombre;
-});
-
-// Filtros estadísticas
-[filtroTipo, filtroCategoria, filtroDesde, filtroHasta].forEach(el => {
-    el.addEventListener('change', renderizarEstadisticas);
-});
-
-btnLimpiarFiltros.addEventListener('click', () => {
-    filtroTipo.value = 'todos';
-    filtroCategoria.value = 'todas';
-    filtroDesde.value = '';
-    filtroHasta.value = '';
-    renderizarEstadisticas();
-});
-
-// Cerrar modal con Escape
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !modalCategorias.hidden) {
-        cerrarModalCategorias();
-    }
-});
-
-cargarRegistros();
+// Inicializar todo
+cargarDatos();

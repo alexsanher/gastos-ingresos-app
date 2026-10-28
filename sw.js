@@ -1,5 +1,7 @@
 // Service Worker simple para cache offline
-const CACHE_NAME = 'gastos-ingresos-v1';
+// Sube esta versión cada vez que cambies HTML/CSS/JS,
+// para que el navegador no siga sirviendo la copia antigua
+const CACHE_NAME = 'gastos-ingresos-v2';
 const ASSETS = [
   './',
   './index.html',

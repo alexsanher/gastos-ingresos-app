@@ -296,6 +296,26 @@ select#tipo option {
     background-color: #1e40af;
 }
 
+.btn-cancelar {
+    width: 100%;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    background: white;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.btn-cancelar:hover {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
 .stats-section {
     margin-bottom: 1rem;
 }
@@ -459,6 +479,44 @@ select#tipo option {
     color: #dc2626;
 }
 
+/* Botones de editar/eliminar de cada registro */
+.item-acciones {
+    display: flex;
+    gap: 0.375rem;
+    width: 100%;
+    justify-content: flex-end;
+}
+
+.btn-item {
+    width: 38px;
+    height: 38px;
+    border: 1px solid #e5e7eb;
+    background: white;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.btn-item.editar:hover {
+    background-color: #eff6ff;
+    border-color: #93c5fd;
+}
+
+.btn-item.eliminar:hover {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+}
+
+@media (min-width: 480px) {
+    .item-acciones {
+        width: auto;
+    }
+}
+
 .vacío {
     text-align: center;
     color: #999;
@@ -590,123 +648,9 @@ select#tipo option {
     margin-bottom: 1rem;
 }
 
-/* MODAL CATEGORÍAS */
-.modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    z-index: 100;
-    animation: fadeIn 0.2s ease;
-}
+/* Estilos para el selector de categorías existentes quedan implicados en .campo.categoria-grupo */
 
-/* Regla específica para ocultar el modal: sin ella, el display: flex de
-   arriba (escrito después de .hidden) gana y el modal se vería siempre */
-.modal.hidden,
-.modal[hidden] {
-    display: none;
-}
-
-.modal-contenido {
-    background: white;
-    border-radius: 16px;
-    width: 100%;
-    max-width: 400px;
-    max-height: 85vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid #eee;
-}
-
-.modal-header h2 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #1a1a1a;
-}
-
-.btn-cerrar {
-    width: 36px;
-    height: 36px;
-    border: none;
-    background: transparent;
-    border-radius: 8px;
-    font-size: 1.5rem;
-    color: #666;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-.btn-cerrar:hover {
-    background-color: #f3f4f6;
-    color: #333;
-}
-
-.modal-cuerpo {
-    padding: 1rem 1.25rem;
-    overflow-y: auto;
-}
-
-.form-nueva-categoria {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.form-nueva-categoria input {
-    flex: 1;
-    padding: 0.75rem;
-}
-
-.btn-pequeno {
-    padding: 0.75rem 1rem;
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background-color 0.2s;
-}
-
-.btn-pequeno:hover {
-    background: #1d4ed8;
-}
-
-.lista-categorias-modal {
-    list-style: none;
-}
-
-.categoria-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.875rem 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.categoria-item:last-child {
-    border-bottom: none;
-}
-
-.categoria-info {
-    display: flex;
+/* Resto de estilos de la app continúan a continuación */
     align-items: center;
     gap: 0.75rem;
 }
@@ -826,14 +770,3 @@ select#tipo option {
     .stats-resumen {
         grid-template-columns: 1fr;
     }
-
-    .modal {
-        padding: 0;
-        align-items: flex-end;
-    }
-
-    .modal-contenido {
-        border-radius: 16px 16px 0 0;
-        max-height: 90vh;
-    }
-}
